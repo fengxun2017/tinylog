@@ -1,98 +1,89 @@
+#include "log_stream.h"
 #include <iostream>
 #include <streambuf>
 #include "fast_memcpy.h"
-#include "log_stream.h"
 
 namespace logging {
-
-/* 类静态成员初始化 */
-std::function<void(const char*, size_t)> LogStream::_output_func = nullptr;
+    /**
+ * @brief LogStream constructor
+ * @param[in] buffer_size Output stream internal buffer size
+ * @param[in] output_func Set the output interface. When the buffer is flushed, this interface will be called to implement data output.
+ */
+LogStream::LogStream(size_t buffer_size, std::function<void(const char *, size_t)> output_func) 
+    : std::ostream(this) {
+    // 设置 streambuf
+    _buffer = new (std::nothrow) char[buffer_size];
+    if (nullptr == _buffer) {
+        setp(nullptr, nullptr);
+        _size = 0;
+    } else {
+        _size = buffer_size;
+        setp(_buffer, _buffer + _size);
+    }
+    _output_func = output_func;
+}
 
 /**
-* @brief LogStream：继承 std::ostream 实现c++的流式输出，继承 std::streambuf 实现缓存
-* @param [in] buffer_size : 缓存大小
+* @note :The internal buffer needs to be released during destruction
 */
-LogStream::LogStream(size_t buffer_size) 
-: std::ostream(this){
-// 设置 streambuf 
-_buffer = new (std::nothrow) char[buffer_size];
-if (nullptr == _buffer) {
-setp(nullptr, nullptr);
-_size = 0;
-} else {
-_size = buffer_size;
-setp(_buffer, _buffer + _size);
-}
+LogStream::~LogStream(void) {
+    delete[] _buffer;
+    // reset pointer
+    _buffer = nullptr;
+    setp(nullptr, nullptr);
 }
 
-/**
-* @brief LogStream 析构时释放持有的内存
+    /**
+* @brief The sputc() and sputn() call this function in case of an overflow (pptr() == nullptr or pptr() >= epptr()).
+* @param [int_type] c : the character to store in the buffer
 */
-LogStream::~LogStream() {
-if (nullptr != _buffer) {
-free(_buffer);
-// reset pointer
-setp(nullptr, nullptr);
-}
-}
+int_type LogStream::overflow(int_type c) {
+    // std::cerr << "overflow" << std::endl;
+    /* The currently used streambuf is not enough, expand the buffer */
+    size_t new_size = (_size + 1) * 3 / 2;
+    char *new_buffer = new (std::nothrow) char[new_size];
+    if (nullptr == new_buffer) {
+        delete[] _buffer;
+        _buffer = nullptr
+        setp(NULL, NULL);
+        std::cerr << "[LogStream::overflow] Failed to expand buffer" << std::endl
+        return std::streambuf::traits_type::eof();
+    }
+    /* Copy data to new buffer */
+    memcpy_fast(new_buffer, _buffer, _size);
+    delete[] _buffer;
+    _buffer = new_buffer;
 
-/**
-* @brief streambuffer满时，增大缓冲区
-* @param [in] c : 溢出的字符
-*/
-int LogStream::overflow(int c) {
-std::cerr << "overflow\n";
-// 当前使用的 streambuf 不够了，扩大一下
-size_t new_size = (_size+1)*3/2;
-char *new_buffer = new (std::nothrow) char[new_size];
-if (nullptr == new_buffer) {
-setp(NULL, NULL);
-free(_buffer);
-return std::streambuf::traits_type::eof();
-} 
-// 原数据拷贝到新内存
-memcpy_fast(new_buffer, _buffer, _size);
-free(_buffer);
-_buffer = new_buffer;
-// 设置新缓冲区的数据区间
-setp(_buffer, _buffer+new_size);
-// 移动当前写指针到旧数据之后
-pbump(_size);
-_size = new_size;
+    /* Set the data range of the new buffer */
+    setp(_buffer, _buffer + new_size);
+    // reset put pointer
+    pbump(_size);
+    _size = new_size;
 
-// 溢出的字符写到新缓冲区里
-return sputc(c);
+    /* The overflowed character is written to the new buffer. */
+    return sputc(c);
 }
 
-/**
-* @brief 刷新缓冲区，将数据输出到异步日志输出接口中
+    /**
+* @brief Flush the buffer and output the data in the buffer to a file or device
 */
 void LogStream::flush_data(void) {
-
-// stream buffer 中有数据，就将数据输出到异步输出接口中
-if (pbase() != pptr() && (nullptr != _output_func)) {
-_output_func(pbase(), pptr() - pbase());
-}
+    if (pbase() != pptr() && (_output_func)) {
+        _output_func(pbase(), pptr() - pbase());
+    }
 }
 
-/**
-* @brief 重置输出缓冲区
+    /**
+* @brief reset internal buffer
 */
 void LogStream::reset_buffer(void) {
-if (nullptr == _buffer) {
-setp(nullptr, nullptr);
-_size = 0;
-} else {
-setp(_buffer, _buffer + _size);
-}
-}
-
-/**
-* @brief 刷新缓冲区，将数据输出到异步日志输出接口中
-*/
-void LogStream::set_output_func(std::function<void(const char*, size_t)> f) {
-_output_func = f;
+    if (nullptr == _buffer) {
+        setp(nullptr, nullptr);
+        _size = 0;
+    } else {
+        setp(_buffer, _buffer + _size);
+    }
 }
 
 
-} // namespace logging
+}  // namespace logging

@@ -1,70 +1,81 @@
 #ifndef _LOGGING_ASYNC_LOGGING_H_
 #define _LOGGING_ASYNC_LOGGING_H_
 
-#include <mutex>
 #include <memory>
+#include <mutex>
 #include <thread>
-#include "log_file.h"
 #include "buffer_queue.h"
+#include "log_file.h"
 
 namespace logging {
 /**
-* @brief 异步日志类，支持多线程写入日志。
-* 内部实际由两个 queue组成， 面向输入的 input_queue，和面向输出的 output_queue
-* 日志写入时，从input_queue中获取空闲的buffer_ptr，将日志信写入buffer中，再将该buffer放入 output_queue。
-* 后台异步任务(只有一个)，会不停从output_queue中取有日志数据的 buffer_ptr, 将日志数据写入文件，再将该buffer_ptr放回input_queue，供下次写入
-*/ 
+* @brief Asynchronous log class supports multi-threaded log writing.
+* It is actually composed of two queues internally, the input-oriented input_queue, and the output-oriented output_queue.
+* When writing the log, obtain the free buffer_ptr from the input_queue, write the log into the buffer, and then put the buffer into the output_queue.
+* The background daemon task (only one) obtains the buffer_ptr from the output_queue, writes the data in the buffer to the file, and then puts the buffer_ptr back into the input_queue for next writing.
+*/
 
 class AsyncLogging {
 
-public:
-/**
-* @brief 异步日志类构造函数
-* @param [in] file_name: 日志文件名
-* @param [in] roll_cycle_hours: 文件滚动周期，分钟为单位。
-等于0，不会根据时间进行滚动生成新日志文件。
-大于0，每roll_cycle个小时会生成新的日志文件。
-* @param [in] roll_size_bytes: 文件滚动大小，字节为单位
-等于0，不会根据日志文件大小滚动生成新日志文件。
-大于0，当前日志文件写入字节大于该值时，自动创建新日志文件。
+   public:
+    /**
+* @brief Asynchronous logger initialization
+* @param [in] file_name: Log file name
+* @param [in] roll_cycle_minutes: Log file rolling period, in minutes.
+* @param [in] roll_size_bytes: File rolling size, in bytes
+* @note  If roll_cycle_minutes is equal to 0, no new log files will be generated based on time rolling.
+*        If roll_size_bytes is equal to 0, new log files will not be rolled based on the log file size.
 */
-void init(std::string file_name, uint64_t roll_cycle_minutes=0, uint64_t roll_size_bytes=0);
+    void init(std::string file_name, uint64_t roll_cycle_minutes = 0,
+              uint64_t roll_size_bytes = 0);
 
-/**
-* @brief 异步日志类析构，析构时需要检查是否还有缓存的日志数据没写到buffer中
+    /**
+* @brief Logger destructor
+* @note When destructing, you need to check whether there is still data in the buffer, and if so, refresh the buffer.
 */
-~AsyncLogging(void);
+    ~AsyncLogging(void);
 
-AsyncLogging(void) : _cur_buffer_ptr(nullptr){}
-/**
-* @brief 日志写入
-* @param [in] data : 日志数据
-* @param [in] size : 写入日志字节长度
+    AsyncLogging(void) : _cur_buffer_ptr(nullptr), _running(false) {}
+
+    /**
+* @brief Log data writing
+* @param [in] data : Log data source address
+* @param [in] size : Log data length
 */
-void append_data(const char *data, size_t size);
+    void append_data(const char *data, size_t size);
 
-/**
-* @brief 启动日志记录
+    /**
+* @brief start background daemon task
 */
-void start();
+    void start();
 
-/**
-* @brief 后台消费线程，AsyncLogging创建时启动改任务，后台消费线程负责将日志数据写入日志文件中。
+
+   private:
+    static const size_t NUM_OF_AVAILABLE_BUFFERS = 10;   //Each buffer size is 1M
+    
+    /**
+* @brief Background log consumption thread implementation, responsible for writing log data into log files
 */
-void background_consume_thread(void);
+    void background_consume_thread(void);
 
-private:
-DataBuffer_ptr _cur_buffer_ptr; ///< 当前正在使用的buffer
-std::mutex _buffer_lock; ///< 保证对 _cur_buffer_ptr 访问的线程安全
+    /* The buffer currently in use */
+    DataBuffer_ptr _cur_buffer_ptr;
 
-std::unique_ptr<BufferQueue> _input_queue_ptr; ///< 输入Queue，从中获取空闲buffer，填满日志数据后放入 输出Queue中，
-std::unique_ptr<BufferQueue> _output_queue_ptr; ///< 输出Queue，从中获取有数据的buffer，数据写入日志文件后，再将空buffer放回 输入Queue。
+    /* Mutex lock to ensure thread safety of access to _cur_buffer_ptr */
+    std::mutex _buffer_lock;
 
-bool _running; ///< 后台消费线程运行指示
-std::thread _background_thread; ///< 后台消费线程
-std::unique_ptr<LogFile> _log_file_ptr; ///< 消费线程实际写入的日志文件 
+    /* Points to the input queue, from which the logger obtains the free buffer, fills it with log data and then puts it into the output queue. */
+    std::unique_ptr<BufferQueue> _input_queue_ptr;
 
+    /* Points to the output queue, from which the logger obtains a buffer with data, writes the data to the log file, and then puts the empty buffer back into the input queue. */
+    std::unique_ptr<BufferQueue> _output_queue_ptr;
+
+    /* background daemon task running status */
+    bool _running;
+    
+    std::thread _background_thread;
+    std::unique_ptr<LogFile> _log_file_ptr;
 };
 
-} // namespace logging
-#endif // _LOGGING_ASYNC_LOGGING_H_
+}  // namespace logging
+#endif  // _LOGGING_ASYNC_LOGGING_H_

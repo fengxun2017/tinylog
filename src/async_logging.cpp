@@ -1,134 +1,164 @@
+#include <chrono>
 #include <cstring>
 #include <iostream>
-#include <chrono>
+#include <new>
 #include "async_logging.h"
-#include "fast_memcpy.h"
 
-namespace logging{
+namespace logging {
 
 /**
-* @brief 异步日志类构造函数
-* @param [in] file_name: 日志文件名
-* @param [in] roll_cycle_hours: 文件滚动周期，分钟为单位。
-等于0，不会根据时间进行滚动生成新日志文件。
-大于0，每roll_cycle个小时会生成新的日志文件。
-* @param [in] roll_size_bytes: 文件滚动大小，字节为单位
-等于0，不会根据日志文件大小滚动生成新日志文件。
-大于0，当前日志文件写入字节大于该值时，自动创建新日志文件。
+* @brief Asynchronous logger initialization
+* @param [in] file_name: Log file name
+* @param [in] roll_cycle_minutes: Log file rolling period, in minutes.
+* @param [in] roll_size_bytes: File rolling size, in bytes
+* @note  If roll_cycle_minutes is equal to 0, no new log files will be generated based on time rolling.
+*        If roll_size_bytes is equal to 0, new log files will not be rolled based on the log file size.
 */
-void AsyncLogging::init(std::string file_name, uint64_t roll_cycle_minutes, uint64_t roll_size_bytes) {
+// FIXME: This work should go into the constructor
+void AsyncLogging::init(std::string file_name, uint64_t roll_cycle_minutes,
+                        uint64_t roll_size_bytes) {
 
-_log_file_ptr.reset(new LogFile(file_name, roll_cycle_minutes, roll_size_bytes));
-if (nullptr == _log_file_ptr) {
-std::cerr << "!!!!! insufficient memory resources !!!!!\n";
-return ;
+    _log_file_ptr.reset(
+        new (std::nothrow) LogFile(file_name, roll_cycle_minutes, roll_size_bytes));
+    if (nullptr == _log_file_ptr) {
+        std::cerr << "[AsyncLogging::init] can not create file !!!!!\n";
+        return;
+    }
+    /* In the initial state, a total of 11 free buffers are available, and the buffer with data is 0 */
+    _input_queue_ptr = std::unique_ptr<BufferQueue>(new (std::nothrow) BufferQueue(NUM_OF_AVAILABLE_BUFFERS));
+    _output_queue_ptr = std::unique_ptr<BufferQueue>(new (std::nothrow) BufferQueue(0));
+    _cur_buffer_ptr = std::unique_ptr<DataBuffer>(new (std::nothrow) DataBuffer());
+
+    if ( (nullptr == _input_queue_ptr) || (nullptr == _output_queue_ptr) 
+        || (nullptr == _cur_buffer_ptr))
+    {
+        std::cerr << "[AsyncLogging::init] can not create buffer queue !!!!!\n";
+    }
+    _running = false;
 }
-/* 初始状态下，共有 11 个空闲buffer可用，有数据的buffer为0 */
-_input_queue_ptr = std::unique_ptr<BufferQueue>(new BufferQueue(4));
-_output_queue_ptr = std::unique_ptr<BufferQueue>(new BufferQueue(0));
-_cur_buffer_ptr = std::unique_ptr<DataBuffer>(new DataBuffer());
 
-_running = false;
-}
-
-/**
-* @brief 异步日志类析构，析构时需要检查是否还有缓存的日志数据没写到buffer中
+   /**
+* @brief Logger destructor
+* @note When destructing, you need to check whether there is still data in the buffer, and if so, refresh the buffer.
 */
 AsyncLogging::~AsyncLogging(void) {
 
-_running = false;
+    _running = false;
 
-/* 清空队列中的缓存 */
-while (!_output_queue_ptr->empty()) {
-auto tmp = _output_queue_ptr->pop_buffer(1);
-if (nullptr != tmp) {
-_log_file_ptr->append_data(tmp->_buffer, tmp->_cur_size);
-tmp->_cur_size = 0;
-}
-}
-/* 当前持有的buffer也可能会有数据没写入 */
-std::unique_lock<std::mutex> lock(_buffer_lock);
-if (_cur_buffer_ptr->_cur_size > 0) {
-_log_file_ptr->append_data(_cur_buffer_ptr->_buffer, _cur_buffer_ptr->_cur_size);
-_cur_buffer_ptr->_cur_size = 0;
-}
-lock.unlock();
+    if (nullptr != _log_file_ptr)
+    {
+        /* Clear the cached data in the output queue */
+        while (!_output_queue_ptr->empty()) {
+            auto tmp = _output_queue_ptr->pop_buffer(1);
+            if (nullptr != tmp) {
+                _log_file_ptr->write_logdata(tmp->get_buffer(), tmp->get_data_size());
+                tmp->reset_buffer();
+            }
+        }
+        /* The currently held buffer may also have data that has not been written. */
+        {
+            std::lock_guard<std::mutex> lock(_buffer_lock);
+            size_t data_size = _cur_buffer_ptr->get_data_size();
+            if (data_size > 0) {
+                _log_file_ptr->write_logdata(_cur_buffer_ptr->get_buffer(),
+                                        data_size);
+                _cur_buffer_ptr->reset_buffer();
+            }
+        }
 
-_log_file_ptr->flush();
+        _log_file_ptr->flush();
+    }
+    else
+    {
+        std::cerr << "[AsyncLogging::~AsyncLogging] file is null" << std::endl;
+    }
 
-if(_background_thread.joinable()) {
-/* 后台消费线程等 queue的超时是 1s， 所以程序退出是差不多有 1s 的延迟*/
-_background_thread.join();
-}
+    if (_background_thread.joinable()) {
+        _background_thread.join();
+    }
 }
 
 /**
-* @brief 日志写入缓存
-* @param [in] data : 日志数据
-* @param [in] size : 写入日志字节长度
+* @brief Log data writing
+* @param [in] data : Log data source address
+* @param [in] size : Log data length
 */
-void AsyncLogging::append_data(const char *data, size_t size){
+void AsyncLogging::append_data(const char *data, size_t size) {
 
-std::unique_lock<std::mutex> lock(_buffer_lock);
-if (_cur_buffer_ptr->_cur_size + size > _cur_buffer_ptr->BUFFER_SIZE) {
-_output_queue_ptr->push_buffer(_cur_buffer_ptr);
+    if (nullptr != _cur_buffer_ptr)
+    {
+        std::unique_lock<std::mutex> lock(_buffer_lock);
+        size_t data_size = _cur_buffer_ptr->get_data_size();
+        if (data_size + size > _cur_buffer_ptr->get_buffer_size()) {
+            _output_queue_ptr->push_buffer(_cur_buffer_ptr);
 
-_cur_buffer_ptr = _input_queue_ptr->pop_buffer(1000);
-// 日志输出太快了，下游处理不过来，没有空间buffer可以写入日志数据，这部分数据直接丢弃了
-if (nullptr == _cur_buffer_ptr) {
-std::cerr << "\n!!!!!!!!!!!!!Log input is too fast!!!!!!!!!!!!!\n";
-}
-}
-
-if (_cur_buffer_ptr != nullptr) {
-memcpy_fast(_cur_buffer_ptr->_buffer+_cur_buffer_ptr->_cur_size, data, size);
-_cur_buffer_ptr->_cur_size += size;
-}
+            /* !!! FIXME: The caller should not be blocked due to logging issues*/
+            _cur_buffer_ptr = _input_queue_ptr->pop_buffer(100);
+            if (nullptr == _cur_buffer_ptr)
+            {
+                std::cerr << "\n!!!Log input is too fast!!!\n";
+                return ;
+            }
+        }
+        _cur_buffer_ptr->input_data(data, size);
+    }
+    else
+    {
+        std::cerr << "[AsyncLogging::append_data] _cur_buffer_ptr is null" << std::endl;
+    }
 }
 
 /**
-* @brief 后台消费线程，AsyncLogging创建时启动该任务，后台消费线程负责将日志数据写入日志文件中。
+* @brief Background log consumption thread implementation, responsible for writing log data into log files
 */
 void AsyncLogging::background_consume_thread(void) {
 
-while (_running) {
-DataBuffer_ptr buffer_ptr = _output_queue_ptr->pop_buffer(1000);
-if(nullptr != buffer_ptr) {
+    while (_running ) {
+        if (nullptr != _log_file_ptr)
+            { 
+            DataBuffer_ptr buffer_ptr = _output_queue_ptr->pop_buffer(1000);
+            if (nullptr != buffer_ptr)
+            {
+                _log_file_ptr->write_logdata(buffer_ptr->get_buffer(),
+                                        buffer_ptr->get_data_size());
 
-/* 从队列中获取到了buffer，就将数据写入文件*/
-_log_file_ptr->append_data(buffer_ptr->_buffer, buffer_ptr->_cur_size);
+                buffer_ptr->reset_buffer();
+                _input_queue_ptr->push_buffer(buffer_ptr);
+            } 
+            else
+            {
+                /* If there is no buffer in the output queue, write the data in the buffer pointed to by _cur_buffer_ptr to the log file. */
+                DataBuffer_ptr tmp = nullptr;
+                {
+                    std::lock_guard<std::mutex> lock(_buffer_lock);
+                    tmp = std::move(_cur_buffer_ptr);
+                    _cur_buffer_ptr = _input_queue_ptr->pop_buffer(1);
+                }
 
-/* 数据写完后，buffer返还到空闲queue中 */
-buffer_ptr->_cur_size = 0;
-_input_queue_ptr->push_buffer(buffer_ptr);
-} else {
-/* 队列中没有写满数据的buffer，那就将当前_cur_buffer_ptr指向的Buffer中的数据写入日志文件 */
-std::unique_lock<std::mutex> lock(_buffer_lock);
-DataBuffer_ptr tmp = std::move(_cur_buffer_ptr);
-_cur_buffer_ptr = _input_queue_ptr->pop_buffer(1);
-lock.unlock();
-
-if (nullptr != tmp && tmp->_cur_size > 0) {
-_log_file_ptr->append_data(tmp->_buffer, tmp->_cur_size, true);
-tmp->_cur_size = 0;
-// 空闲buffer返还到队列中
-_input_queue_ptr->push_buffer(tmp);
-}
-}
-}
-
+                if (nullptr != tmp && tmp->get_data_size() > 0) {
+                    _log_file_ptr->write_logdata(tmp->get_buffer(), tmp->get_data_size(), true);
+                    tmp->reset_buffer();
+                    _input_queue_ptr->push_buffer(tmp);
+                }
+            }
+        }
+        else
+        {
+            std::cerr << "[AsyncLogging::background_consume_thread] file is null" << std::endl;
+        }
+    }
 }
 
 /**
-* @brief 启动日志记录
+* @brief Start logging
 */
 void AsyncLogging::start() {
-_running = true;
-std::thread t(&AsyncLogging::background_consume_thread, this);
-_background_thread = std::move(t);
+    _running = true;
+    std::thread t(&AsyncLogging::background_consume_thread, this);
+    _background_thread = std::move(t);
 
-/* 等待后台线程实际启动 */
-while(!_background_thread.joinable()){}
+    /* Wait for the thread to actually start */
+    while (!_background_thread.joinable()) {}
 }
 
-} // namespace logging
+}  // namespace logging

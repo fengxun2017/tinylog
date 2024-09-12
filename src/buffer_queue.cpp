@@ -1,68 +1,96 @@
+#include "buffer_queue.h"
+#include <chrono>
+#include <condition_variable>
 #include <memory>
 #include <new>
 #include <utility>
-#include <chrono>
-#include <condition_variable>
-#include "buffer_queue.h"
+#include "fast_memcpy.h"
 
 namespace logging {
 /**
-* @brief 创建Buffer队列
-* @param [in] size : queue中存储的buffer个数,默认存储10个buffer
-* @note queue中存储的是指向buffer的指针，即从Queue中获取空闲buffer时，返回的是buffer指针。
-* buffer不需要使用了，放回Queue中时，也是push buffer指针。
-*/
-BufferQueue::BufferQueue(uint32_t size) {
-for (uint32_t i = 0; i < size; i++) {
-_buffer_queue.emplace(new DataBuffer());
-}
-}
-
-/**
-* @brief 从queue中获取 buffer_ptr。
-* @param [in] timeout_ms : 等待超时，单位为毫秒。0 表一直等待
-* 
-* @retval 返回一个指向DataBuffer的指针，或者nullptr
-*/
-DataBuffer_ptr BufferQueue::pop_buffer(uint32_t timeout_ms){
-std::unique_lock<std::mutex> lk(_mutex);
-while (_buffer_queue.empty()) {
-if (0 == timeout_ms)
+ * @brief Save input data into internal buffer
+ * @param[in] data Data source address
+ * @param[in] size data size
+ */
+void DataBuffer::input_data(const char *data, size_t size)
 {
-_cv.wait(lk);
-} else {
-auto ret = _cv.wait_for(lk, std::chrono::milliseconds(timeout_ms));
-if (std::cv_status::timeout == ret) {
-return nullptr;
-}
-}
-}
-DataBuffer_ptr buffer = std::move(_buffer_queue.front());
-_buffer_queue.pop();
-lk.unlock();
+    size_t left_space = _BUFFER_SIZE - _cur_size;
+    size_t copy_size = (left_space > size) ? size : (left_space);
+    memcpy_fast(_buffer + _cur_size, data, copy_size);
 
-return buffer;
+    _cur_size += copy_size;
 }
 
 /**
-* @brief 将一个buffer推入queue中，实际入队的是指向该buffer结构的指针。
-* @param [in] DataBuffer_ptr 指向DataBuffer的指针
+ * @brief reset buffer
+ */
+void DataBuffer::reset_buffer(void)
+{
+    _cur_size = 0;
+}
+
+
+    /**
+ * @brief BufferQueue constructor
+ * @param[in] size The number of elements that can be stored in the queue
+ */
+BufferQueue::BufferQueue(size_t size) {
+    for (uint32_t i = 0; i < size; i++) {
+        _buffer_queue.emplace(new (std::nothrow) DataBuffer());
+    }
+}
+
+    /**
+* @brief Get a buffer from the buffer queue
+* @param [in] timeout_ms : This value represents the wait time when there are no buffers in the queue. A value of 0 means wait forever.
+* @retval a pointer to the data buffer
 */
-void BufferQueue::push_buffer(DataBuffer_ptr &buffer_ptr){
-std::unique_lock<std::mutex> lk(_mutex);
-_buffer_queue.push(std::move(buffer_ptr));
-lk.unlock();
+DataBuffer_ptr BufferQueue::pop_buffer(uint32_t timeout_ms) {
+    std::unique_lock<std::mutex> lk(_mutex);
+    while (_buffer_queue.empty()) {
+        if (0 == timeout_ms) {
+            _cv.wait(lk);
+        } else {
+            auto ret = _cv.wait_for(lk, std::chrono::milliseconds(timeout_ms));
+            if (std::cv_status::timeout == ret) {
+                return nullptr;
+            }
+        }
+    }
+    DataBuffer_ptr buffer = std::move(_buffer_queue.front());
+    /* The element is still in the queue, but the content has been moved away */
+    _buffer_queue.pop();
 
-_cv.notify_all();
+    lk.unlock();
+
+    return buffer;
 }
 
-/**
-* @brief 检查队列是否为空。
-* @retval 为空返回true，否则返回false
+    /**
+* @brief Push a buffer into the queue
+* @param [in] DataBuffer_ptr pointer to buffer
+*/
+void BufferQueue::push_buffer(DataBuffer_ptr &buffer_ptr) {
+    if(nullptr != buffer_ptr)
+    {
+        {
+            std::lock_guard<std::mutex> lk(_mutex);
+            _buffer_queue.push(std::move(buffer_ptr));
+        }
+        _cv.notify_all();
+    }
+}
+
+    /**
+* @brief Check if the queue is empty.
+* @retval Returns true if empty, false otherwise
 */
 bool BufferQueue::empty(void) {
-std::unique_lock<std::mutex> lk(_mutex);
-return _buffer_queue.empty();
+    bool ret = false;
+    std::lock_guard<std::mutex> lk(_mutex);
+    ret =  _buffer_queue.empty();
+
+    return ret;
 }
 
-} // namespace logging
+}  // namespace logging

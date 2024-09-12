@@ -1,62 +1,64 @@
 #ifndef _LOGGING_LOGGING_H_
 #define _LOGGING_LOGGING_H_
 
-#include <string>
+#include <functional>
 #include <ostream>
 #include <streambuf>
-#include <functional>
+#include <string>
 #include "log_stream.h"
 
 namespace logging {
 
 enum LogLevel {
-LOG_DEBUG = 0,
-LOG_INFO,
-LOG_WARNING,
-LOG_ERROR,
-NUM_LOG_LEVELS,
+    LOG_DEBUG = 0,
+    LOG_INFO,
+    LOG_WARNING,
+    LOG_ERROR,
+    NUM_LOG_LEVELS,
 };
 
 /**
-* @brief 日志类，基于异步日志实现日志类，提供C++ stream风格输出日志
+* @brief Logger class, implemented based on asynchronous logger, and provides C++ stream style output log
 */
 class Logger {
-public:
-/**
-* @brief 构建日志类，每条信息构建一个日志类。
-* @param [in] level : 当前这条日志的等级
-* @param [in] file : 当前这条日志所在的文件
-* @param [in] func_name : 当前这条日志所在的函数名
-* @param [in] line : 当前这条日志所在的行号
+   public:
+    /**
+* @brief Logger constructor, each message instantiates a logger
+* @param [in] level : The current level of this log message
+* @param [in] file : The file where this current log message is located
+* @param [in] func_name : The function where this current log message is located
+* @param [in] line : The line number of the current log message
 */
-Logger(const LogLevel level, const char *file, const char *func_name, const size_t line);
-/**
-* @brief 日志类析构函数，析构时执行日志数据刷新
+    Logger(const LogLevel level, const char *file, const char *func_name,
+           const size_t line);
+    /**
+* @brief Logger destructor, execute log data refresh when destructed
 */
-~Logger();
+    ~Logger();
+
+    /**
+* @brief Get the logger's streaming buffer.
+*/
+    LogStream &stream() { return *_stream; }
+
+   private:
+    LogStream *_stream;
+};  // class Logger
 
 /**
-* @brief 获取日志对象的流式缓冲区。
-*/
-LogStream& stream() {return *_stream;}
-
-private:
-LogStream *_stream;
-}; // class Logger
-
-/**
-* @brief 模块初始化
-* @param [in] conf_file : 日志配置文件路径
+* @brief Log module initialization
+* @param [in] conf_file : Log configuration file path
 */
 void log_init(std::string conf_file);
 
-/* 全局日志等级 */
+/* Global log level */
 extern LogLevel _global_log_level;
 
-} // namespace logging
+}  // namespace logging
 
-#define _LOG(LEVEL) if((LOG_##LEVEL >= _global_log_level) && (LOG_##LEVEL < NUM_LOG_LEVELS)) \
-logging::Logger(LOG_##LEVEL, __FILE__, __func__, __LINE__).stream()
+#define _LOG(LEVEL)                                                           \
+    if ((LOG_##LEVEL >= _global_log_level) && (LOG_##LEVEL < NUM_LOG_LEVELS)) \
+    logging::Logger(LOG_##LEVEL, __FILE__, __func__, __LINE__).stream()
 #define LOG(LEVEL) _LOG(LEVEL)
 
-#endif // _LOGGING_LOGGING_H_
+#endif  // _LOGGING_LOGGING_H_

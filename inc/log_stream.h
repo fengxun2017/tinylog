@@ -1,56 +1,52 @@
 #ifndef _LOGGING_LOG_STREAM_H_
 #define _LOGGING_LOG_STREAM_H_
 
+#include <functional>
 #include <ostream>
 #include <streambuf>
-#include <functional>
 namespace logging {
 /**
-* @brief LogStream：日志流式缓冲类。继承 std::ostream 实现c++的流式输出，继承 std::streambuf 实现缓存
+* @brief LogStream：Streaming buffer class. Inherit std::ostream to implement c++ streaming output, and inherit std::streambuf to implement buffer.
 */
-class LogStream : virtual public std::streambuf, public std::ostream{
+class LogStream : public std::streambuf, public std::ostream {
 
-public:
+   using int_type = typename std::streambuf::int_type;
+   public:
+    /**
+ * @brief LogStream constructor
+ * @param[in] buffer_size Output stream internal buffer size
+ * @param[in] output_func Set the output interface. When the buffer is flushed, this interface will be called to implement data output.
+ */
+    LogStream(size_t buffer_size, std::function<void(const char *, size_t)> output_func);
 
-/**
-* @brief LogStream：继承 std::ostream 实现c++的流式输出，继承 std::streambuf 实现缓存
-* @param [in] buffer_size : 缓存大小
+    /**
+* @note :The internal buffer needs to be released during destruction
 */
-LogStream(size_t buffer_size);
+    ~LogStream(void);
 
-/**
-* @brief LogStream 析构时释放持有的内存
+    /**
+* @brief The sputc() and sputn() call this function in case of an overflow (pptr() == nullptr or pptr() >= epptr()).
+* @param [int_type] c : the character to store in the buffer
 */
-~LogStream();
+    virtual int overflow(int_type c);
 
-/**
-* @brief streambuffer满时，增大缓冲区
-* @param [in] c : 溢出的字符
+    /**
+* @brief Flush the buffer and output the data in the buffer to a file or device
 */
-virtual int overflow(int c);
+    void flush_data(void);
 
-/**
-* @brief 刷新缓冲区，将数据输出到异步日志输出接口中
+    /**
+* @brief reset internal buffer
 */
-void flush_data(void);
+    void reset_buffer(void);
 
-/**
-* @brief 重置输出缓冲区
-*/
-void reset_buffer(void);
+   private:
+    char *_buffer;
+    size_t _size;
+    std::function<void(const char *, size_t)> _output_func;
 
-/**
-* @brief 刷新缓冲区，将数据输出到异步日志输出接口中
-*/
-static void set_output_func(std::function<void(const char*, size_t)> f);
+};  // class LogStream
 
-private:
-char *_buffer;
-size_t _size;
-static std::function<void(const char*, size_t)> _output_func;
+}  // namespace logging
 
-}; // class LogStream
-
-} // namespace logging
-
-#endif // _LOGGING_LOG_STREAM_H_
+#endif  // _LOGGING_LOG_STREAM_H_
