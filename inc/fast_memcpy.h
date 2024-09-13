@@ -37,19 +37,25 @@
 //---------------------------------------------------------------------
 // fast copy for different sizes
 //---------------------------------------------------------------------
-static INLINE void memcpy_sse2_16(void *dst, const void *src) {
+static INLINE void
+memcpy_sse2_16 (void *dst, const void *src)
+{
     __m128i m0 = _mm_loadu_si128(((const __m128i *)src) + 0);
     _mm_storeu_si128(((__m128i *)dst) + 0, m0);
 }
 
-static INLINE void memcpy_sse2_32(void *dst, const void *src) {
+static INLINE void
+memcpy_sse2_32 (void *dst, const void *src)
+{
     __m128i m0 = _mm_loadu_si128(((const __m128i *)src) + 0);
     __m128i m1 = _mm_loadu_si128(((const __m128i *)src) + 1);
     _mm_storeu_si128(((__m128i *)dst) + 0, m0);
     _mm_storeu_si128(((__m128i *)dst) + 1, m1);
 }
 
-static INLINE void memcpy_sse2_64(void *dst, const void *src) {
+static INLINE void
+memcpy_sse2_64 (void *dst, const void *src)
+{
     __m128i m0 = _mm_loadu_si128(((const __m128i *)src) + 0);
     __m128i m1 = _mm_loadu_si128(((const __m128i *)src) + 1);
     __m128i m2 = _mm_loadu_si128(((const __m128i *)src) + 2);
@@ -60,7 +66,9 @@ static INLINE void memcpy_sse2_64(void *dst, const void *src) {
     _mm_storeu_si128(((__m128i *)dst) + 3, m3);
 }
 
-static INLINE void memcpy_sse2_128(void *dst, const void *src) {
+static INLINE void
+memcpy_sse2_128 (void *dst, const void *src)
+{
     __m128i m0 = _mm_loadu_si128(((const __m128i *)src) + 0);
     __m128i m1 = _mm_loadu_si128(((const __m128i *)src) + 1);
     __m128i m2 = _mm_loadu_si128(((const __m128i *)src) + 2);
@@ -82,11 +90,14 @@ static INLINE void memcpy_sse2_128(void *dst, const void *src) {
 //---------------------------------------------------------------------
 // tiny memory copy with jump table optimized
 //---------------------------------------------------------------------
-static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
-    unsigned char *dd = ((unsigned char *)dst) + size;
+static INLINE void *
+memcpy_tiny (void *dst, const void *src, size_t size)
+{
+    unsigned char       *dd = ((unsigned char *)dst) + size;
     const unsigned char *ss = ((const unsigned char *)src) + size;
 
-    switch (size) {
+    switch (size)
+    {
         case 64:
             memcpy_sse2_64(dd - 64, ss - 64);
         case 0:
@@ -108,7 +119,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
             memcpy_sse2_64(dd - 67, ss - 67);
         case 3:
             *((uint16_t *)(dd - 3)) = *((uint16_t *)(ss - 3));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 68:
@@ -121,7 +132,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
             memcpy_sse2_64(dd - 69, ss - 69);
         case 5:
             *((uint32_t *)(dd - 5)) = *((uint32_t *)(ss - 5));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 70:
@@ -148,50 +159,50 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
             memcpy_sse2_64(dd - 73, ss - 73);
         case 9:
             *((uint64_t *)(dd - 9)) = *((uint64_t *)(ss - 9));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 74:
             memcpy_sse2_64(dd - 74, ss - 74);
         case 10:
             *((uint64_t *)(dd - 10)) = *((uint64_t *)(ss - 10));
-            *((uint16_t *)(dd - 2)) = *((uint16_t *)(ss - 2));
+            *((uint16_t *)(dd - 2))  = *((uint16_t *)(ss - 2));
             break;
 
         case 75:
             memcpy_sse2_64(dd - 75, ss - 75);
         case 11:
             *((uint64_t *)(dd - 11)) = *((uint64_t *)(ss - 11));
-            *((uint32_t *)(dd - 4)) = *((uint32_t *)(ss - 4));
+            *((uint32_t *)(dd - 4))  = *((uint32_t *)(ss - 4));
             break;
 
         case 76:
             memcpy_sse2_64(dd - 76, ss - 76);
         case 12:
             *((uint64_t *)(dd - 12)) = *((uint64_t *)(ss - 12));
-            *((uint32_t *)(dd - 4)) = *((uint32_t *)(ss - 4));
+            *((uint32_t *)(dd - 4))  = *((uint32_t *)(ss - 4));
             break;
 
         case 77:
             memcpy_sse2_64(dd - 77, ss - 77);
         case 13:
             *((uint64_t *)(dd - 13)) = *((uint64_t *)(ss - 13));
-            *((uint32_t *)(dd - 5)) = *((uint32_t *)(ss - 5));
-            dd[-1] = ss[-1];
+            *((uint32_t *)(dd - 5))  = *((uint32_t *)(ss - 5));
+            dd[-1]                   = ss[-1];
             break;
 
         case 78:
             memcpy_sse2_64(dd - 78, ss - 78);
         case 14:
             *((uint64_t *)(dd - 14)) = *((uint64_t *)(ss - 14));
-            *((uint64_t *)(dd - 8)) = *((uint64_t *)(ss - 8));
+            *((uint64_t *)(dd - 8))  = *((uint64_t *)(ss - 8));
             break;
 
         case 79:
             memcpy_sse2_64(dd - 79, ss - 79);
         case 15:
             *((uint64_t *)(dd - 15)) = *((uint64_t *)(ss - 15));
-            *((uint64_t *)(dd - 8)) = *((uint64_t *)(ss - 8));
+            *((uint64_t *)(dd - 8))  = *((uint64_t *)(ss - 8));
             break;
 
         case 80:
@@ -219,7 +230,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 19:
             memcpy_sse2_16(dd - 19, ss - 19);
             *((uint16_t *)(dd - 3)) = *((uint16_t *)(ss - 3));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 84:
@@ -234,7 +245,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 21:
             memcpy_sse2_16(dd - 21, ss - 21);
             *((uint32_t *)(dd - 5)) = *((uint32_t *)(ss - 5));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 86:
@@ -334,7 +345,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 35:
             memcpy_sse2_32(dd - 35, ss - 35);
             *((uint16_t *)(dd - 3)) = *((uint16_t *)(ss - 3));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 100:
@@ -349,7 +360,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 37:
             memcpy_sse2_32(dd - 37, ss - 37);
             *((uint32_t *)(dd - 5)) = *((uint32_t *)(ss - 5));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 102:
@@ -380,7 +391,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 41:
             memcpy_sse2_32(dd - 41, ss - 41);
             *((uint64_t *)(dd - 9)) = *((uint64_t *)(ss - 9));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 106:
@@ -388,7 +399,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 42:
             memcpy_sse2_32(dd - 42, ss - 42);
             *((uint64_t *)(dd - 10)) = *((uint64_t *)(ss - 10));
-            *((uint16_t *)(dd - 2)) = *((uint16_t *)(ss - 2));
+            *((uint16_t *)(dd - 2))  = *((uint16_t *)(ss - 2));
             break;
 
         case 107:
@@ -396,7 +407,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 43:
             memcpy_sse2_32(dd - 43, ss - 43);
             *((uint64_t *)(dd - 11)) = *((uint64_t *)(ss - 11));
-            *((uint32_t *)(dd - 4)) = *((uint32_t *)(ss - 4));
+            *((uint32_t *)(dd - 4))  = *((uint32_t *)(ss - 4));
             break;
 
         case 108:
@@ -404,7 +415,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 44:
             memcpy_sse2_32(dd - 44, ss - 44);
             *((uint64_t *)(dd - 12)) = *((uint64_t *)(ss - 12));
-            *((uint32_t *)(dd - 4)) = *((uint32_t *)(ss - 4));
+            *((uint32_t *)(dd - 4))  = *((uint32_t *)(ss - 4));
             break;
 
         case 109:
@@ -412,8 +423,8 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 45:
             memcpy_sse2_32(dd - 45, ss - 45);
             *((uint64_t *)(dd - 13)) = *((uint64_t *)(ss - 13));
-            *((uint32_t *)(dd - 5)) = *((uint32_t *)(ss - 5));
-            dd[-1] = ss[-1];
+            *((uint32_t *)(dd - 5))  = *((uint32_t *)(ss - 5));
+            dd[-1]                   = ss[-1];
             break;
 
         case 110:
@@ -421,7 +432,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 46:
             memcpy_sse2_32(dd - 46, ss - 46);
             *((uint64_t *)(dd - 14)) = *((uint64_t *)(ss - 14));
-            *((uint64_t *)(dd - 8)) = *((uint64_t *)(ss - 8));
+            *((uint64_t *)(dd - 8))  = *((uint64_t *)(ss - 8));
             break;
 
         case 111:
@@ -429,7 +440,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
         case 47:
             memcpy_sse2_32(dd - 47, ss - 47);
             *((uint64_t *)(dd - 15)) = *((uint64_t *)(ss - 15));
-            *((uint64_t *)(dd - 8)) = *((uint64_t *)(ss - 8));
+            *((uint64_t *)(dd - 8))  = *((uint64_t *)(ss - 8));
             break;
 
         case 112:
@@ -461,7 +472,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
             memcpy_sse2_32(dd - 51, ss - 51);
             memcpy_sse2_16(dd - 19, ss - 19);
             *((uint16_t *)(dd - 3)) = *((uint16_t *)(ss - 3));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 116:
@@ -478,7 +489,7 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
             memcpy_sse2_32(dd - 53, ss - 53);
             memcpy_sse2_16(dd - 21, ss - 21);
             *((uint32_t *)(dd - 5)) = *((uint32_t *)(ss - 5));
-            dd[-1] = ss[-1];
+            dd[-1]                  = ss[-1];
             break;
 
         case 118:
@@ -574,21 +585,25 @@ static INLINE void *memcpy_tiny(void *dst, const void *src, size_t size) {
 //---------------------------------------------------------------------
 // main routine
 //---------------------------------------------------------------------
-static void *memcpy_fast(void *destination, const void *source, size_t size) {
-    unsigned char *dst = (unsigned char *)destination;
-    const unsigned char *src = (const unsigned char *)source;
-    static size_t cachesize = 0x200000;  // L2-cache size
-    size_t padding;
+static void *
+memcpy_fast (void *destination, const void *source, size_t size)
+{
+    unsigned char       *dst       = (unsigned char *)destination;
+    const unsigned char *src       = (const unsigned char *)source;
+    static size_t        cachesize = 0x200000; // L2-cache size
+    size_t               padding;
 
     // small memory copy
-    if (size <= 128) {
+    if (size <= 128)
+    {
         return memcpy_tiny(dst, src, size);
     }
 
     // align destination to 16 bytes boundary
     padding = (16 - (((size_t)dst) & 15)) & 15;
 
-    if (padding > 0) {
+    if (padding > 0)
+    {
         __m128i head = _mm_loadu_si128((const __m128i *)src);
         _mm_storeu_si128((__m128i *)dst, head);
         dst += padding;
@@ -597,10 +612,12 @@ static void *memcpy_fast(void *destination, const void *source, size_t size) {
     }
 
     // medium size copy
-    if (size <= cachesize) {
+    if (size <= cachesize)
+    {
         __m128i c0, c1, c2, c3, c4, c5, c6, c7;
 
-        for (; size >= 128; size -= 128) {
+        for (; size >= 128; size -= 128)
+        {
             c0 = _mm_loadu_si128(((const __m128i *)src) + 0);
             c1 = _mm_loadu_si128(((const __m128i *)src) + 1);
             c2 = _mm_loadu_si128(((const __m128i *)src) + 2);
@@ -621,13 +638,17 @@ static void *memcpy_fast(void *destination, const void *source, size_t size) {
             _mm_store_si128((((__m128i *)dst) + 7), c7);
             dst += 128;
         }
-    } else {  // big memory copy
+    }
+    else
+    { // big memory copy
         __m128i c0, c1, c2, c3, c4, c5, c6, c7;
 
         _mm_prefetch((const char *)(src), _MM_HINT_NTA);
 
-        if ((((size_t)src) & 15) == 0) {  // source aligned
-            for (; size >= 128; size -= 128) {
+        if ((((size_t)src) & 15) == 0)
+        { // source aligned
+            for (; size >= 128; size -= 128)
+            {
                 c0 = _mm_load_si128(((const __m128i *)src) + 0);
                 c1 = _mm_load_si128(((const __m128i *)src) + 1);
                 c2 = _mm_load_si128(((const __m128i *)src) + 2);
@@ -648,8 +669,11 @@ static void *memcpy_fast(void *destination, const void *source, size_t size) {
                 _mm_stream_si128((((__m128i *)dst) + 7), c7);
                 dst += 128;
             }
-        } else {  // source unaligned
-            for (; size >= 128; size -= 128) {
+        }
+        else
+        { // source unaligned
+            for (; size >= 128; size -= 128)
+            {
                 c0 = _mm_loadu_si128(((const __m128i *)src) + 0);
                 c1 = _mm_loadu_si128(((const __m128i *)src) + 1);
                 c2 = _mm_loadu_si128(((const __m128i *)src) + 2);
