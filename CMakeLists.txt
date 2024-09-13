@@ -1,5 +1,5 @@
-set(CMAKE_C_COMPILER /opt/compiler/gcc-8.2/bin/gcc)
-set(CMAKE_CXX_COMPILER /opt/compiler/gcc-8.2/bin/g++)
+set(CMAKE_C_COMPILER gcc)
+set(CMAKE_CXX_COMPILER g++)
 
 #重新定义当前目标的源文件的__FILE__宏
 function(redefine_file_macro targetname)
@@ -30,7 +30,7 @@ endfunction()
 # 指定CMake编译最低要求版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2.2)
 
-set(CMAKE_CXX_FLAGS "-O1 -msse2 -std=c++14 -lpthread")
+set(CMAKE_CXX_FLAGS "-O1 -msse2 -std=c++11")
 add_definitions(-Wno-builtin-macro-redefined)
 
 # 给项目命名
@@ -43,14 +43,12 @@ message(STATUS "current_dir:${PROJECT_SOURCE_DIR}")
 
 
 # 指定头文件目录
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include)
-INCLUDE_DIRECTORIES(/gperftools/include)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/inc)
+# INCLUDE_DIRECTORIES(/gperftools/include)
 
 FILE(GLOB SRC_test_async_logging  ${PROJECT_SOURCE_DIR}/unittest/test_async_logging.cpp)
 FILE(GLOB SRC_test_buffer_queue  ${PROJECT_SOURCE_DIR}/unittest/test_buffer_queue.cpp)
-FILE(GLOB SRC_test_append_file   ${PROJECT_SOURCE_DIR}/unittest/test_append_file.cpp)
-FILE(GLOB SRC_test_log_file   ${PROJECT_SOURCE_DIR}/unittest/test_log_file.cpp)
-FILE(GLOB SRC_test_logger_file   ${PROJECT_SOURCE_DIR}/unittest/test_logging.cpp)
+
 
 add_library(log_lib STATIC ${SRC_LIST_CPP})
 
@@ -70,14 +68,6 @@ target_link_libraries(test_async_logging log_lib pthread)
 add_executable(test_buffer_queue ${SRC_test_buffer_queue})
 redefine_file_macro(test_buffer_queue)
 target_link_libraries(test_buffer_queue log_lib pthread)
-
-add_executable(test_append_file ${SRC_test_append_file})
-redefine_file_macro(test_append_file)
-target_link_libraries(test_append_file log_lib)
-
-add_executable(test_logger ${SRC_test_logger_file})
-redefine_file_macro(test_logger)
-target_link_libraries(test_logger log_lib pthread)
 
 # 指定生成库文件的目录
 #SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

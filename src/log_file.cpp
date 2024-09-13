@@ -57,7 +57,7 @@ void LogFile::roll_log_file(void) {
 * @param [in] flush_now Whether to flush the buffer data to the file immediately
 */
 void LogFile::write_logdata(const char *logdata, uint32_t size,
-                            bool flush_now = false) {
+                            bool flush_now) {
 
     size_t written_bytes = 0;
     bool need_roll = false;

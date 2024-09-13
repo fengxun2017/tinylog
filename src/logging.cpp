@@ -8,6 +8,17 @@
 
 namespace logging {
 
+void async_output(const char *data, size_t size);
+
+/* Global log level */
+LogLevel _global_log_level = LOG_DEBUG;
+AsyncLogging _global_async_logging;
+
+/* Use thread local variables, multi-thread safe */
+thread_local std::time_t global_last_second = 0;
+thread_local char global_time_str[] = "2024-01-01 00:00:00";
+thread_local LogStream global_log_stream(128, async_output);
+
 const char *LogLevelName[NUM_LOG_LEVELS] = {
     "DEBUG: ",
     "INFO: ",
@@ -53,19 +64,9 @@ Logger::~Logger() {
     }
 }
 
-
 void async_output(const char *data, size_t size) {
     _global_async_logging.append_data(data, size);
 }
-
-/* Global log level */
-LogLevel _global_log_level = LOG_DEBUG;
-AsyncLogging _global_async_logging;
-
-/* Use thread local variables, multi-thread safe */
-thread_local std::time_t global_last_second = 0;
-thread_local char global_time_str[] = "2024-01-01 00:00:00";
-thread_local LogStream global_log_stream(128, async_output);
 
 
 /**

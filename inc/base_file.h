@@ -1,7 +1,7 @@
 #ifndef _LOGGING_APPEND_FILE_H_
 #define _LOGGING_APPEND_FILE_H_
 
-#include <string.h>
+#include <string>
 
 namespace logging {
 

@@ -1,4 +1,4 @@
-https://github.com/skywind3000/FastMemcpy
+// https://github.com/skywind3000/FastMemcpy
 
 //=====================================================================
 //

@@ -35,18 +35,18 @@ LogStream::~LogStream(void) {
 
     /**
 * @brief The sputc() and sputn() call this function in case of an overflow (pptr() == nullptr or pptr() >= epptr()).
-* @param [int_type] c : the character to store in the buffer
+* @param [in] c : the character to store in the buffer
 */
-int_type LogStream::overflow(int_type c) {
+std::streambuf::int_type LogStream::overflow(std::streambuf::int_type c) {
     // std::cerr << "overflow" << std::endl;
     /* The currently used streambuf is not enough, expand the buffer */
     size_t new_size = (_size + 1) * 3 / 2;
     char *new_buffer = new (std::nothrow) char[new_size];
     if (nullptr == new_buffer) {
         delete[] _buffer;
-        _buffer = nullptr
+        _buffer = nullptr;
         setp(NULL, NULL);
-        std::cerr << "[LogStream::overflow] Failed to expand buffer" << std::endl
+        std::cerr << "[LogStream::overflow] Failed to expand buffer" << std::endl;
         return std::streambuf::traits_type::eof();
     }
     /* Copy data to new buffer */

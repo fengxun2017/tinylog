@@ -10,7 +10,6 @@ namespace logging {
 */
 class LogStream : public std::streambuf, public std::ostream {
 
-   using int_type = typename std::streambuf::int_type;
    public:
     /**
  * @brief LogStream constructor
@@ -26,9 +25,9 @@ class LogStream : public std::streambuf, public std::ostream {
 
     /**
 * @brief The sputc() and sputn() call this function in case of an overflow (pptr() == nullptr or pptr() >= epptr()).
-* @param [int_type] c : the character to store in the buffer
+* @param [in] c : the character to store in the buffer
 */
-    virtual int overflow(int_type c);
+    virtual int overflow(std::streambuf::int_type c);
 
     /**
 * @brief Flush the buffer and output the data in the buffer to a file or device
