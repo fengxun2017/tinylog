@@ -29,6 +29,7 @@ endfunction()
 
 # 指定CMake编译最低要求版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2.2)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS "-O1 -msse2 -std=c++11")
 add_definitions(-Wno-builtin-macro-redefined)

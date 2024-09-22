@@ -54,6 +54,7 @@ BaseFile::BaseFile(const std::string file_name)
     _written_bytes = 0;
 
     /* The "e" indicates that the O_CLOEXEC flag is applied on the file */
+    /* FIXME: does not meet the C standard */
     _file = fopen(file_name.c_str(), "ae");
     if (NULL == _file)
     {
@@ -115,6 +116,10 @@ BaseFile::append_data(const char *data, size_t size, bool flush_now)
                 }
             }
             remainder -= n;
+            if(0 != remainder)
+            {
+                std::cerr << "[BaseFile::append_data] not completed" << std::endl;
+            }
 
         } while (0 != remainder);
 

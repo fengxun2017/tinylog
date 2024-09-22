@@ -60,7 +60,7 @@ public:
     void start();
 
 private:
-    static const size_t NUM_OF_AVAILABLE_BUFFERS = 10; // Each buffer size is 1M
+    static const size_t NUM_OF_AVAILABLE_BUFFERS = 50; 
 
     /**
      * @brief Background log consumption thread implementation, responsible for

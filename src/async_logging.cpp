@@ -65,8 +65,9 @@ AsyncLogging::~AsyncLogging(void)
         }
         /* The currently held buffer may also have data that has not been
          * written. */
+        std::unique_lock<std::mutex> lock(_buffer_lock);
+        if(nullptr != _cur_buffer_ptr)
         {
-            std::lock_guard<std::mutex> lock(_buffer_lock);
             size_t                      data_size = _cur_buffer_ptr->get_data_size();
             if (data_size > 0)
             {
@@ -74,6 +75,7 @@ AsyncLogging::~AsyncLogging(void)
                 _cur_buffer_ptr->reset_buffer();
             }
         }
+        lock.unlock();
 
         _log_file_ptr->flush();
     }
@@ -97,9 +99,9 @@ void
 AsyncLogging::append_data(const char *data, size_t size)
 {
 
+    std::unique_lock<std::mutex> lock(_buffer_lock);
     if (nullptr != _cur_buffer_ptr)
     {
-        std::unique_lock<std::mutex> lock(_buffer_lock);
         size_t                       data_size = _cur_buffer_ptr->get_data_size();
         if (data_size + size > _cur_buffer_ptr->get_buffer_size())
         {
@@ -107,7 +109,7 @@ AsyncLogging::append_data(const char *data, size_t size)
 
             /* !!! FIXME: The caller should not be blocked due to logging
              * issues*/
-            _cur_buffer_ptr = _input_queue_ptr->pop_buffer(100);
+            _cur_buffer_ptr = _input_queue_ptr->pop_buffer(1);
             if (nullptr == _cur_buffer_ptr)
             {
                 std::cerr << "\n!!!Log input is too fast!!!\n";
@@ -115,9 +117,11 @@ AsyncLogging::append_data(const char *data, size_t size)
             }
         }
         _cur_buffer_ptr->input_data(data, size);
+        lock.unlock();
     }
     else
     {
+        lock.unlock();
         std::cerr << "[AsyncLogging::append_data] _cur_buffer_ptr is null" << std::endl;
     }
 }
@@ -138,9 +142,21 @@ AsyncLogging::background_consume_thread(void)
             if (nullptr != buffer_ptr)
             {
                 _log_file_ptr->write_logdata(buffer_ptr->get_buffer(), buffer_ptr->get_data_size());
-
                 buffer_ptr->reset_buffer();
-                _input_queue_ptr->push_buffer(buffer_ptr);
+                {
+                    std::lock_guard<std::mutex> lock(_buffer_lock);
+                    if(nullptr == _cur_buffer_ptr)
+                    {
+                        _cur_buffer_ptr = std::move(buffer_ptr);
+                        std::cout << "[AsyncLogging::background_consume_thread] reset _cur_buffer_ptr" << std::endl;
+                    }
+                }
+
+                if(nullptr != buffer_ptr)
+                {
+                    _input_queue_ptr->push_buffer(buffer_ptr);
+                }
+
             }
             else
             {
@@ -149,8 +165,15 @@ AsyncLogging::background_consume_thread(void)
                 DataBuffer_ptr tmp = nullptr;
                 {
                     std::lock_guard<std::mutex> lock(_buffer_lock);
-                    tmp             = std::move(_cur_buffer_ptr);
-                    _cur_buffer_ptr = _input_queue_ptr->pop_buffer(1);
+                    if (nullptr != _cur_buffer_ptr)
+                    {
+                        tmp             = std::move(_cur_buffer_ptr);
+                        _cur_buffer_ptr = _input_queue_ptr->pop_buffer(1);
+                    }
+                }
+                if (nullptr == _cur_buffer_ptr)
+                {
+                    std::cerr << "[AsyncLogging::background_consume_thread] cant not get free buffer" << std::endl;
                 }
 
                 if (nullptr != tmp && tmp->get_data_size() > 0)
@@ -160,6 +183,9 @@ AsyncLogging::background_consume_thread(void)
                     _input_queue_ptr->push_buffer(tmp);
                 }
             }
+
+            
+
         }
         else
         {

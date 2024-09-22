@@ -33,6 +33,7 @@ LogStream::LogStream(size_t buffer_size, std::function<void(const char *, size_t
  */
 LogStream::~LogStream(void)
 {
+    /* FIXME: Manage with smart pointer */
     delete[] _buffer;
     // reset pointer
     _buffer = nullptr;
@@ -82,7 +83,14 @@ LogStream::flush_data(void)
 {
     if (pbase() != pptr() && (_output_func))
     {
-        _output_func(pbase(), pptr() - pbase());
+        if (nullptr != _output_func)
+        {
+            _output_func(pbase(), pptr() - pbase());
+        }
+        else
+        {
+            (void)fwrite(pbase(), 1, pptr() - pbase(), stdout);
+        }
     }
 }
 

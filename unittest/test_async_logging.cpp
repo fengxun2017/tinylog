@@ -17,9 +17,11 @@ int          size = strlen(data);
 void
 write_fun (void)
 {
-    for (uint32_t i = 0; i < (500000); i++)
+    for (uint32_t i = 0; i < (1000000); i++)
     {
         logger.append_data(data, size);
+        if(i%100==0)
+            std::this_thread::sleep_for(std::chrono::microseconds(5));
     }
 }
 
