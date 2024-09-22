@@ -72,7 +72,14 @@ Logger::~Logger()
 void
 async_output (const char *data, size_t size)
 {
-    _global_async_logging.append_data(data, size);
+    if (_global_async_logging.is_running())
+    {
+        _global_async_logging.append_data(data, size);
+    }
+    else
+    {
+        (void)fwrite(data, 1, size, stdout);
+    }
 }
 
 /**

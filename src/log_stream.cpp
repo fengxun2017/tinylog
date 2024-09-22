@@ -81,16 +81,9 @@ LogStream::overflow(std::streambuf::int_type c)
 void
 LogStream::flush_data(void)
 {
-    if (pbase() != pptr() && (_output_func))
+    if (pbase() != pptr() && (nullptr != _output_func))
     {
-        if (nullptr != _output_func)
-        {
-            _output_func(pbase(), pptr() - pbase());
-        }
-        else
-        {
-            (void)fwrite(pbase(), 1, pptr() - pbase(), stdout);
-        }
+        _output_func(pbase(), pptr() - pbase());
     }
 }
 

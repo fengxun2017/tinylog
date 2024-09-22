@@ -59,6 +59,7 @@ public:
      */
     void start();
 
+    bool is_running(void) {return _running;}
 private:
     static const size_t NUM_OF_AVAILABLE_BUFFERS = 50; 
 
@@ -84,7 +85,7 @@ private:
     std::unique_ptr<BufferQueue> _output_queue_ptr;
 
     /* background daemon task running status */
-    bool _running;
+    bool _running = false;
 
     std::thread              _background_thread;
     std::unique_ptr<LogFile> _log_file_ptr;

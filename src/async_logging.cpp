@@ -38,7 +38,6 @@ AsyncLogging::init(std::string file_name, uint64_t roll_cycle_minutes, uint64_t 
     {
         std::cerr << "[AsyncLogging::init] can not create buffer queue !!!!!\n";
     }
-    _running = false;
 }
 
 /**
@@ -78,10 +77,6 @@ AsyncLogging::~AsyncLogging(void)
         lock.unlock();
 
         _log_file_ptr->flush();
-    }
-    else
-    {
-        std::cerr << "[AsyncLogging::~AsyncLogging] file is null" << std::endl;
     }
 
     if (_background_thread.joinable())
