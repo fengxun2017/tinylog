@@ -63,8 +63,8 @@ extern LogLevel _global_log_level;
 } // namespace logging
 
 #define _LOG(LEVEL)                                                           \
-    if ((LOG_##LEVEL >= _global_log_level) && (LOG_##LEVEL < NUM_LOG_LEVELS)) \
-    logging::Logger(LOG_##LEVEL, __FILE__, __func__, __LINE__).stream()
+    if ((logging::LOG_##LEVEL >= logging::_global_log_level) && (logging::LOG_##LEVEL < logging::NUM_LOG_LEVELS)) \
+    logging::Logger(logging::LOG_##LEVEL, __FILE__, __func__, __LINE__).stream()
 #define LOG(LEVEL) _LOG(LEVEL)
 
 #endif // _LOGGING_LOGGING_H_
