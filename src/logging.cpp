@@ -21,8 +21,8 @@ thread_local LogStream   global_log_stream(128, async_output);
 
 const char *LogLevelName[NUM_LOG_LEVELS] = {
     "DEBUG: ",
-    "INFO: ",
-    "WARN: ",
+    "INFO : ",
+    "WARN : ",
     "ERROR: ",
 };
 
@@ -39,19 +39,17 @@ Logger::Logger(const LogLevel level, const char *file, const char *func_name, co
 
     _stream = &global_log_stream;
     _stream->reset_buffer();
-    //(*_stream) << LogLevelName[level];
+    (*_stream) << LogLevelName[level];
 
-    // std::time_t now =
-    // std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    // if (now != global_last_second) {
-    // global_last_second = now;
-    // std::tm tm_data;
+    std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    if (now != global_last_second) {
+        global_last_second = now;
+        std::tm tm_data;
 
-    // localtime_r(&now, &tm_data);
-    // std::strftime(global_time_str, sizeof(global_time_str), "%Y-%m-%d
-    // %H:%M:%S", &tm_data);
-    // }
-    //(*_stream) << global_time_str;
+        localtime_r(&now, &tm_data);
+        std::strftime(global_time_str, sizeof(global_time_str), "%Y-%m-%d%H:%M:%S", &tm_data);
+    }
+    (*_stream) << global_time_str << " ";
     //(*_stream) << file << line << func_name ;
 
     // (*_stream) << " [" << file << ":" << line << " "<< func_name << "] ";
