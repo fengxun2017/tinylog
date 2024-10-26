@@ -47,7 +47,7 @@ Logger::Logger(const LogLevel level, const char *file, const char *func_name, co
         std::tm tm_data;
 
         localtime_r(&now, &tm_data);
-        std::strftime(global_time_str, sizeof(global_time_str), "%Y-%m-%d%H:%M:%S", &tm_data);
+        std::strftime(global_time_str, sizeof(global_time_str), "%Y-%m-%d %H:%M:%S", &tm_data);
     }
     (*_stream) << global_time_str << " ";
     //(*_stream) << file << line << func_name ;
