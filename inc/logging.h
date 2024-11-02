@@ -11,7 +11,8 @@ namespace logging {
 
 enum LogLevel
 {
-    LOG_DEBUG = 0,
+    LOG_INNER_DEBUG = 0,    // This option is used for internal debugging purposes
+    LOG_DEBUG,
     LOG_INFO,
     LOG_WARNING,
     LOG_ERROR,
