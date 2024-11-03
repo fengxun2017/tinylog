@@ -11,7 +11,7 @@ namespace logging {
 void async_output(const char *data, size_t size);
 
 /* Global log level */
-LogLevel     _global_log_level = LOG_DEBUG;
+LogLevel     _global_log_level = LOG_INNER_DEBUG;
 AsyncLogging _global_async_logging;
 
 /* Use thread local variables, multi-thread safe */
@@ -20,6 +20,7 @@ thread_local char        global_time_str[]  = "2024-01-01 00:00:00";
 thread_local LogStream   global_log_stream(128, async_output);
 
 const char *LogLevelName[NUM_LOG_LEVELS] = {
+    "IDEBUG:",
     "DEBUG: ",
     "INFO : ",
     "WARN : ",
