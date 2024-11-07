@@ -9,6 +9,7 @@
 
 namespace logging {
 
+
 enum LogLevel
 {
     LOG_INNER_DEBUG = 0,    // This option is used for internal debugging purposes
@@ -18,6 +19,24 @@ enum LogLevel
     LOG_ERROR,
     NUM_LOG_LEVELS,
 };
+
+
+/*
+ * @note  If roll_cycle_minutes is equal to 0, no new log files will be
+ * generated based on time rolling. If roll_size_bytes is equal to 0, new log
+ * files will not be rolled based on the log file size.
+ */
+typedef struct LogControl
+{
+    bool use_ms;                    // If true, millisecond precision is used, otherwise second precision is used
+    bool show_path;                 // Whether to display the file and line number of the log
+    bool show_func;                 // Whether to display the function to which the log belongs
+    LogLevel level;                 // Only logs that are greater than or equal to that log level are displayed
+    std::string logfile;            // The name of the log file
+    uint64_t roll_cycle_minutes;    // Log file rolling period, in minutes.
+    uint64_t roll_size_bytes;       // Log File rolling size, in bytes
+}LogContorl;
+
 
 /**
  * @brief Logger class, implemented based on asynchronous logger, and provides
@@ -54,9 +73,10 @@ private:
 
 /**
  * @brief Log module initialization
- * @param [in] conf_file : Log configuration file path
+ * @param [in] cfg : Log control parameters
+
  */
-void log_init(std::string conf_file);
+void log_init (LogContorl cfg);
 
 /* Global log level */
 extern LogLevel _global_log_level;

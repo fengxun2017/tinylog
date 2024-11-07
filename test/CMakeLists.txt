@@ -35,20 +35,21 @@ set(CMAKE_CXX_FLAGS "-O1 -msse2 -std=c++11")
 add_definitions(-Wno-builtin-macro-redefined)
 
 # 给项目命名
-PROJECT(slog)
+PROJECT(tinlog)
 
 # 收集c/c++文件并赋值给变量SRC_LIST_CPP  ${PROJECT_SOURCE_DIR}代表工程根目录
-FILE(GLOB SRC_LIST_CPP ${PROJECT_SOURCE_DIR}/src/*.cpp)
+FILE(GLOB SRC_LIST_CPP ${PROJECT_SOURCE_DIR}/../src/*.cpp)
 
 message(STATUS "current_dir:${PROJECT_SOURCE_DIR}")
 
 
 # 指定头文件目录
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/inc)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../inc)
 # INCLUDE_DIRECTORIES(/gperftools/include)
 
-FILE(GLOB SRC_test_async_logging  ${PROJECT_SOURCE_DIR}/unittest/test_async_logging.cpp)
-FILE(GLOB SRC_test_buffer_queue  ${PROJECT_SOURCE_DIR}/unittest/test_buffer_queue.cpp)
+FILE(GLOB SRC_test_async_logging  ${PROJECT_SOURCE_DIR}/test_async_logging.cpp)
+FILE(GLOB SRC_test_buffer_queue  ${PROJECT_SOURCE_DIR}/test_buffer_queue.cpp)
+FILE(GLOB SRC_test_logging  ${PROJECT_SOURCE_DIR}/test_logging.cpp)
 
 
 add_library(log_lib STATIC ${SRC_LIST_CPP})
@@ -58,23 +59,21 @@ add_library(log_lib STATIC ${SRC_LIST_CPP})
 #set_property(TARGET profiler PROPERTY IMPORTED_LOCATION /gperftools/lib/libprofiler.a)
 
 # 设置单元测试可执行文件输出路径
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/output/unittest/)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/output_bin)
 message(STATUS "unittest_out:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 # 单元测试可执行文件生成
 add_executable(test_async_logging ${SRC_test_async_logging})
 redefine_file_macro(test_async_logging)
-target_link_libraries(test_async_logging log_lib pthread)
+target_link_libraries(test_async_logging log_lib)
 
 add_executable(test_buffer_queue ${SRC_test_buffer_queue})
 redefine_file_macro(test_buffer_queue)
-target_link_libraries(test_buffer_queue log_lib pthread)
+target_link_libraries(test_buffer_queue log_lib)
 
-# 指定生成库文件的目录
-#SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-# 取变量 SRC_LIST_CPP 与 SRC_LIST_C 的值
-# 指定生成libmyprint 动态库（默认为静态库）
-# SHARED指定生成库类型为动态库 STATIC为静态库
-#ADD_LIBRARY(myprint SHARED ${SRC_LIST_CPP} ${SRC_LIST_C})
+add_executable(test_logging ${SRC_test_logging})
+redefine_file_macro(test_logging)
+target_link_libraries(test_logging log_lib)
+
 
 #cmake -D CMAKE_C_COMPILER=/opt/compiler/gcc-8.2/bin/gcc -D CMAKE_CXX_COMPILER=/opt/compiler/gcc-8.2/bin/g++ ..

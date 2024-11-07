@@ -109,11 +109,14 @@ async_output (const char *data, size_t size)
  * @param [in] conf_file : Log configuration file path
  */
 void
-log_init (std::string conf_file)
+log_init (LogContorl cfg)
 {
 
-    _global_log_level = LOG_INFO;
-    _global_async_logging.init("test_time_cycle.log", 10, 0);
+    _global_use_ms_precision = cfg.use_ms; 
+    _global_show_path = cfg.show_path;
+    _global_show_func = cfg.show_func;
+    _global_log_level = cfg.level;
+    _global_async_logging.init(cfg.logfile, cfg.roll_cycle_minutes, cfg.roll_size_bytes);
 
     _global_async_logging.start();
 }

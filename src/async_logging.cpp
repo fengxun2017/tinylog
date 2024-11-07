@@ -128,7 +128,6 @@ AsyncLogging::append_data(const char *data, size_t size)
 void
 AsyncLogging::background_consume_thread(void)
 {
-
     while (_running)
     {
         if (nullptr != _log_file_ptr)
