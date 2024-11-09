@@ -97,7 +97,7 @@ AsyncLogging::append_data(const char *data, size_t size)
     std::unique_lock<std::mutex> lock(_buffer_lock);
     if (nullptr != _cur_buffer_ptr)
     {
-        size_t                       data_size = _cur_buffer_ptr->get_data_size();
+        size_t data_size = _cur_buffer_ptr->get_data_size();
         if (data_size + size > _cur_buffer_ptr->get_buffer_size())
         {
             _output_queue_ptr->push_buffer(_cur_buffer_ptr);

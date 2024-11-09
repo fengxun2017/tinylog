@@ -34,6 +34,7 @@ void
 LogFile::roll_log_file(void)
 {
     char new_file_name[MAX_FILENAME_SIZE] = { 0 };
+    static uint32_t index = 0;
 
     if (nullptr != _log_file)
     {
@@ -42,7 +43,9 @@ LogFile::roll_log_file(void)
         localtime_r(&_file_create_time, &tm_data);
 
         /* close and rename */
-        std::string file_name_format = _file_name + ".%Y%m%d%H%M";
+        std::string file_name_format = _file_name + ".%Y%m%d%H%M%S_" + std::to_string(index);
+        index += 1;
+
         std::strftime(new_file_name, sizeof(new_file_name), file_name_format.c_str(), &tm_data);
         _log_file->flush();
         _log_file->close();

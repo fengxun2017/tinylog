@@ -47,7 +47,7 @@ public:
     void reset_buffer(void);
 
 private:
-    static const size_t _BUFFER_SIZE = 64 * 1024;
+    static const size_t _BUFFER_SIZE = 32 * 1024;
     /* The amount of data currently cached */
     size_t _cur_size;
     /* The buffer where the data is actually stored */

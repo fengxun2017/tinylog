@@ -51,7 +51,7 @@ public:
     void flush(void);
 
 private:
-    char   _local_buffer[64 * 1024];
+    char   _local_buffer[32 * 1024];
     FILE  *_file;
     size_t _written_bytes;
 

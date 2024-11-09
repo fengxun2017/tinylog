@@ -61,7 +61,8 @@ public:
 
     bool is_running(void) {return _running;}
 private:
-    static const size_t NUM_OF_AVAILABLE_BUFFERS = 50; 
+    /* Simple type, initialized directly */
+    static const size_t NUM_OF_AVAILABLE_BUFFERS = 300; 
 
     /**
      * @brief Background log consumption thread implementation, responsible for
