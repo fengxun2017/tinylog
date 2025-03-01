@@ -1,4 +1,4 @@
-
+cmake_minimum_required(VERSION 3.10)
 message(STATUS "in loglib show PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
 
 # 搜索源文件
