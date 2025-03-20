@@ -159,7 +159,7 @@ AsyncLogging::background_consume_thread(void)
                 DataBuffer_ptr tmp = nullptr;
                 {
                     std::lock_guard<std::mutex> lock(_buffer_lock);
-                    if (nullptr != _cur_buffer_ptr)
+                    if (nullptr != _cur_buffer_ptr && _cur_buffer_ptr->get_data_size() > 0)
                     {
                         tmp             = std::move(_cur_buffer_ptr);
                         _cur_buffer_ptr = _input_queue_ptr->pop_buffer(1);
@@ -170,9 +170,12 @@ AsyncLogging::background_consume_thread(void)
                     std::cerr << "[AsyncLogging::background_consume_thread] cant not get free buffer" << std::endl;
                 }
 
-                if (nullptr != tmp && tmp->get_data_size() > 0)
+                if (nullptr != tmp)
                 {
-                    _log_file_ptr->write_logdata(tmp->get_buffer(), tmp->get_data_size(), true);
+                    if (tmp->get_data_size() > 0)
+                    {
+                        _log_file_ptr->write_logdata(tmp->get_buffer(), tmp->get_data_size(), true);
+                    }
                     tmp->reset_buffer();
                     _input_queue_ptr->push_buffer(tmp);
                 }

@@ -34,7 +34,7 @@ typedef struct LogControl
     LogLevel level;                 // Only logs that are greater than or equal to that log level are displayed
     std::string logfile;            // The name of the log file
     uint64_t roll_cycle_minutes;    // Log file rolling period, in minutes.
-    uint64_t roll_size_bytes;       // Log File rolling size, in bytes
+    uint64_t roll_size_kbytes;       // Log File rolling size, in Kbytes
 }LogContorl;
 
 
@@ -53,7 +53,7 @@ public:
      * located
      * @param [in] line : The line number of the current log message
      */
-    Logger(const LogLevel level, const char *file, const char *func_name, const size_t line);
+    Logger(const LogLevel level, const char *file, const char *func_name, const size_t line, bool show_header = true);
     /**
      * @brief Logger destructor, execute log data refresh when destructed
      */
@@ -87,11 +87,20 @@ extern LogLevel _global_log_level;
     #define _LOG(LEVEL)                                                           \
         if ((logging::LOG_##LEVEL > logging::NUM_LOG_LEVELS) && (logging::LOG_##LEVEL < logging::NUM_LOG_LEVELS)) \
         logging::Logger(logging::LOG_##LEVEL, __FILE__, __func__, __LINE__).stream()
+    #define _LOG_RAW(LEVEL)                                                           \
+        if ((logging::LOG_##LEVEL >= NUM_LOG_LEVELS) && (logging::LOG_##LEVEL < logging::NUM_LOG_LEVELS)) \
+        logging::Logger(logging::LOG_##LEVEL, __FILE__, __func__, __LINE__, false).stream()
 #else
     #define _LOG(LEVEL)                                                           \
         if ((logging::LOG_##LEVEL >= logging::_global_log_level) && (logging::LOG_##LEVEL < logging::NUM_LOG_LEVELS)) \
         logging::Logger(logging::LOG_##LEVEL, __FILE__, __func__, __LINE__).stream()
+
+    #define _LOG_RAW(LEVEL)                                                           \
+        if ((logging::LOG_##LEVEL >= logging::_global_log_level) && (logging::LOG_##LEVEL < logging::NUM_LOG_LEVELS)) \
+        logging::Logger(logging::LOG_##LEVEL, __FILE__, __func__, __LINE__, false).stream()
 #endif
+
 #define LOG(LEVEL) _LOG(LEVEL)
+#define LOG_RAW(LEVEL)  _LOG_RAW(LEVEL)
 
 #endif // _LOGGING_LOGGING_H_

@@ -41,42 +41,45 @@ const char *LogLevelName[NUM_LOG_LEVELS] = {
  * located
  * @param [in] line : The line number of the current log message
  */
-Logger::Logger(const LogLevel level, const char *file, const char *func_name, const size_t line)
+Logger::Logger(const LogLevel level, const char *file, const char *func_name, const size_t line, bool show_header)
 {
 
     _stream = &global_log_stream;
     _stream->reset_buffer();
-    (*_stream) << LogLevelName[level] << "[ ";
 
-    auto now = std::chrono::system_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
-    if (time_t_now != global_last_second) {
-        global_last_second = time_t_now;
-        std::tm tm_data;
-
-        localtime_r(&time_t_now, &tm_data);
-        std::strftime(global_time_str, sizeof(global_time_str), "%Y-%m-%d %H:%M:%S", &tm_data);
-    }
-    (*_stream) << global_time_str;
-
-    if (_global_use_ms_precision)
+    if (show_header)
     {
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-        std::ostringstream oss;
-        oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
-        (*_stream) << oss.str();
-    }
+        (*_stream) << LogLevelName[level] << "[ ";
+        auto now = std::chrono::system_clock::now();
+        auto time_t_now = std::chrono::system_clock::to_time_t(now);
+        if (time_t_now != global_last_second) {
+            global_last_second = time_t_now;
+            std::tm tm_data;
 
-    if (_global_show_path)
-    {
-        (*_stream) << " " << file << ":" << line;
-    }
+            localtime_r(&time_t_now, &tm_data);
+            std::strftime(global_time_str, sizeof(global_time_str), "%Y-%m-%d %H:%M:%S", &tm_data);
+        }
+        (*_stream) << global_time_str;
 
-    if (_global_show_func)
-    {
-        (*_stream) << " " << func_name;
+        if (_global_use_ms_precision)
+        {
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+            std::ostringstream oss;
+            oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+            (*_stream) << oss.str();
+        }
+
+        if (_global_show_path)
+        {
+            (*_stream) << " " << file << ":" << line;
+        }
+
+        if (_global_show_func)
+        {
+            (*_stream) << " " << func_name;
+        }
+        (*_stream) << " ] ";
     }
-    (*_stream) << " ] ";
 }
 
 /**
@@ -116,7 +119,7 @@ log_init (LogContorl cfg)
     _global_show_path = cfg.show_path;
     _global_show_func = cfg.show_func;
     _global_log_level = cfg.level;
-    _global_async_logging.init(cfg.logfile, cfg.roll_cycle_minutes, cfg.roll_size_bytes);
+    _global_async_logging.init(cfg.logfile, cfg.roll_cycle_minutes, cfg.roll_size_kbytes*1024);
 
     _global_async_logging.start();
 }

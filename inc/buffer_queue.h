@@ -89,6 +89,7 @@ public:
      */
     bool empty(void);
 
+    int size(void) {return _buffer_queue.size();}
 private:
     std::queue<DataBuffer_ptr> _buffer_queue;
     std::mutex                 _mutex;

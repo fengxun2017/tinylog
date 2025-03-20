@@ -56,7 +56,7 @@ main (void)
     cfg.level = logging::LOG_DEBUG;
     cfg.logfile = "mylog.log";
     cfg.roll_cycle_minutes = 0;
-    cfg.roll_size_bytes = 10*1024*1024;
+    cfg.roll_size_kbytes = 10*1024;
     logging::log_init(cfg);
 
     std::vector<std::thread> threads;
