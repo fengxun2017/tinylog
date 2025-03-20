@@ -23,7 +23,7 @@ bool         _global_show_func = false;
 /* Use thread local variables, multi-thread safe */
 thread_local std::time_t global_last_second = 0;
 thread_local char        global_time_str[32]  = {0};
-thread_local LogStream   global_log_stream(128, async_output);
+thread_local LogStream   global_log_stream(256, async_output);
 
 const char *LogLevelName[NUM_LOG_LEVELS] = {
     "IDEBUG:",
